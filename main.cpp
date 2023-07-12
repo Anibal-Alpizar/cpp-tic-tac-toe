@@ -1,6 +1,8 @@
-
 #include <iostream>
 #include <string>
+#include <algorithm>
+#include <cstdlib> // Para la función rand()
+
 
 using namespace std;
 
@@ -11,7 +13,33 @@ const int MAX_PLAYERS = 10;
 string playerInfo[MAX_PLAYERS][3]; // Variable global para almacenar información de los jugadores
 int playerCount = 0; // Variable global para contar los jugadores registrados
 
-int buscarJugador(const string playerInfo[][3], int playerCount, const string& cedula);
+
+
+// Function to reset the game board
+void resetBoard(char board[][COLUMNS])
+{
+    for (int row = 0; row < ROWS; row++)
+    {
+        for (int column = 0; column < COLUMNS; column++)
+        {
+            board[row][column] = ' ';
+        }
+    }
+}
+
+
+
+int buscarJugador(const string playerInfo[][3], int playerCount, const string& cedula)
+{
+    for (int i = 0; i < playerCount; i++)
+    {
+        if (playerInfo[i][0] == cedula)
+        {
+            return i; // Jugador encontrado, retornar el índice
+        }
+    }
+    return -1; // Jugador no encontrado
+}
 
 // Function to display the game board
 void displayBoard(char board[][COLUMNS])
@@ -69,6 +97,122 @@ bool isWinner(char board[][COLUMNS], char player)
 
 }
 
+void playTicTacToeAgainstPC(string player, string symbol, string playerInfo[][3], int& playerCount)
+{
+    char board[ROWS][COLUMNS] =
+    {
+        {' ', ' ', ' '},
+        {' ', ' ', ' '},
+        {' ', ' ', ' '}
+    };
+
+    char currentPlayer = 'X';
+
+    int row, column;
+    bool playerWins = false;
+
+    while (true)
+    {
+        // Display the current board
+        cout << "Game board:" << endl;
+        displayBoard(board);
+        cout << endl;
+
+        // Ask the player to enter a position
+        if (currentPlayer == 'X')
+        {
+            cout << "Player " << currentPlayer << "'s turn" << endl;
+            cout << "Enter the row (0-" << ROWS - 1 << "): ";
+            cin >> row;
+            cout << "Enter the column (0-" << COLUMNS - 1 << "): ";
+            cin >> column;
+        }
+        else
+        {
+            cout << "Computer's turn" << endl;
+            // Generate random positions for the computer
+            row = rand() % ROWS;
+            column = rand() % COLUMNS;
+        }
+
+        // Validate the entered position
+        if (row < 0 || row >= ROWS || column < 0 || column >= COLUMNS || board[row][column] != ' ')
+        {
+            cout << "Invalid position. Please try again." << endl;
+            continue;
+        }
+
+        // Update the board with the player's move
+        board[row][column] = currentPlayer;
+
+        // Check if the player has won
+        if (isWinner(board, currentPlayer))
+        {
+            if (currentPlayer == 'X')
+            {
+                playerWins = true;
+            }
+            cout << "Player " << currentPlayer << " has won!" << endl;
+            cout << "Congratulations, player " << player << " has won the game!" << endl;
+
+            // Increment the player's wins if they win against the computer
+            int jugadorIndex = buscarJugador(playerInfo, playerCount, player);
+            if (jugadorIndex != -1)
+            {
+                int wins = std::stoi(playerInfo[jugadorIndex][2]);
+                wins++;
+                playerInfo[jugadorIndex][2] = std::to_string(wins);
+            }
+
+            break;
+        }
+
+        // Check for a tie
+        bool isTie = true;
+        for (int r = 0; r < ROWS; r++)
+        {
+            for (int c = 0; c < COLUMNS; c++)
+            {
+                if (board[r][c] == ' ')
+                {
+                    isTie = false;
+                    break;
+                }
+            }
+            if (!isTie)
+            {
+                break;
+            }
+        }
+        if (isTie)
+        {
+            cout << "It's a tie!" << endl;
+            break;
+        }
+
+        // Switch to the next player
+        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+    }
+
+    // Ask if the player wants to return to the main menu
+    char choice;
+    cout << "Press S if you want to return to the main menu (S/N): ";
+    cin >> choice;
+
+    if (toupper(choice) == 'S')
+    {
+        // Reset the board and return to the main menu
+        resetBoard(board);
+        currentPlayer = 'X';
+    }
+    else
+    {
+        // Exit the program
+        cout << "Thank you for playing!" << endl;
+        exit(0);
+    }
+}
+
 
 void registrarJugadores(string playerInfo[][3], int& playerCount)
 {
@@ -78,28 +222,61 @@ void registrarJugadores(string playerInfo[][3], int& playerCount)
         return;
     }
 
-    cout << "Enter the ID number of Player " << playerCount + 1 << ": ";
-    cin >> playerInfo[playerCount][0];
+    string cedula;
+    bool cedulaValida = false;
+
+    while (!cedulaValida)
+    {
+        cout << "Enter the ID number (9 digits) of Player " << playerCount + 1 << ": ";
+        cin >> cedula;
+
+        // Validar la longitud de la cédula
+        if (cedula.length() != 9)
+        {
+            cout << "Invalid ID number. Please enter a 9-digit number without dashes." << endl;
+            continue;
+        }
+
+        // Validar si la cédula contiene guiones
+        if (cedula.find('-') != string::npos)
+        {
+            cout << "Invalid ID number. Please enter a 9-digit number without dashes." << endl;
+            continue;
+        }
+
+        // Validar si la cédula contiene caracteres no numéricos
+        bool caracteresValidos = true;
+        for (int i = 0; i < cedula.length(); i++)
+        {
+            if (!isdigit(cedula[i]))
+            {
+                caracteresValidos = false;
+                break;
+            }
+        }
+
+        if (!caracteresValidos)
+        {
+            cout << "Invalid ID number. Please enter a 9-digit number without dashes." << endl;
+            continue;
+        }
+
+        cedulaValida = true;
+    }
+
     cout << "Enter the name of Player " << playerCount + 1 << ": ";
-    cin >> playerInfo[playerCount][1];
-    playerInfo[playerCount][2] = "0"; // Inicializar la cantidad de victorias en 0
+    string nombre;
+    cin >> nombre;
+
+    playerInfo[playerCount][0] = cedula;
+    playerInfo[playerCount][1] = nombre;
+    playerInfo[playerCount][2] = "0"; // Inicializar la cantidad de partidas ganadas en 0
 
     playerCount++;
     cout << endl;
 }
 
 
-// Function to reset the game board
-void resetBoard(char board[][COLUMNS])
-{
-    for (int row = 0; row < ROWS; row++)
-    {
-        for (int column = 0; column < COLUMNS; column++)
-        {
-            board[row][column] = ' ';
-        }
-    }
-}
 
 
 
@@ -160,14 +337,17 @@ void playTicTacToe(string player1, string player2, string symbol1, string symbol
             cin >> regresar;
             if (toupper(regresar) == 'S')
             {
-                break; // Salir del bucle y regresar al menú principal
+                exit(0); // Salir del bucle y regresar al menú principal
+            }
+            else if (toupper(regresar) == 'N')
+            {
+                cout << "Gracias por jugar" << endl;
+                exit(0); // Finalizar el programa
             }
             else
             {
-                // Reiniciar el juego si el jugador no desea regresar al menú principal
-                resetBoard(board);
-                currentPlayer = symbol1[0];
-                continue;
+                cout << "Opción no válida. El programa se cerrará por seguridad." << endl;
+                exit(0); // Finalizar el programa
             }
         }
 
@@ -200,12 +380,15 @@ void playTicTacToe(string player1, string player2, string symbol1, string symbol
             {
                 break; // Salir del bucle y regresar al menú principal
             }
+            else if (toupper(regresar) == 'N')
+            {
+                cout << "Gracias por jugar" << endl;
+                exit(0); // Finalizar el programa
+            }
             else
             {
-                // Reiniciar el juego si el jugador no desea regresar al menú principal
-                resetBoard(board);
-                currentPlayer = symbol1[0];
-                continue;
+                cout << "Opción no válida. El programa se cerrará por seguridad." << endl;
+                exit(0); // Finalizar el programa
             }
         }
 
@@ -213,6 +396,7 @@ void playTicTacToe(string player1, string player2, string symbol1, string symbol
         currentPlayer = (currentPlayer == symbol1[0]) ? symbol2[0] : symbol1[0];
     }
 }
+
 
 // Function to display the players' results
 void displayResults(string playerInfo[][3], int playerCount)
@@ -222,7 +406,7 @@ void displayResults(string playerInfo[][3], int playerCount)
 
     for (int i = 0; i < playerCount; i++)
     {
-        cout << playerInfo[i][0] << "\t\t" << playerInfo[i][1] << "\t\t" << playerInfo[i][2] << endl;
+        cout << playerInfo[i][0] << "\t" << playerInfo[i][1] << "\t\t" << playerInfo[i][2] << endl;
     }
 
     cout << "Desea regresar al menú principal (S/N): ";
@@ -232,26 +416,23 @@ void displayResults(string playerInfo[][3], int playerCount)
     if (toupper(choice) == 'S')
     {
         // Reiniciar el tablero y el contador de jugadores
-       // resetBoard(board);
+        // resetBoard(board);
         playerCount = 0;
+    }
+
+    else if (toupper(choice) == 'N')
+    {
+        cout << "Gracias por jugar" << endl;
+        exit(0); // Finalizar el programa
+    }
+    else
+    {
+        cout << "Opción no válida. El programa se cerrará por seguridad." << endl;
+        exit(0); // Finalizar el programa
     }
 
     cout << endl;
 }
-
-
-int buscarJugador(const string playerInfo[][3], int playerCount, const string& cedula)
-{
-    for (int i = 0; i < playerCount; i++)
-    {
-        if (playerInfo[i][0] == cedula)
-        {
-            return i; // Jugador encontrado, retornar el índice
-        }
-    }
-    return -1; // Jugador no encontrado
-}
-
 
 
 int main()
@@ -267,7 +448,9 @@ int main()
         cout << "1. Registrar jugadores" << endl;
         cout << "2. Play a game" << endl;
         cout << "3. View results" << endl;
+        cout << "5. Vs.Pc" << endl;
         cout << "4. Quit" << endl;
+
         cout << "Select an option (1-4): ";
         int option;
         cin >> option;
@@ -345,9 +528,39 @@ int main()
         {
             break;
         }
-        else
+        else if (option == 5)
         {
-            cout << "Invalid option. Please try again." << endl;
+            if (playerCount < 1)
+            {
+                cout << "Insufficient number of players. Please register at least one player." << endl;
+                cout << endl;
+                continue;
+            }
+
+            // Obtener el número de cédula del jugador
+            string cedula;
+            cout << "Enter the ID number of Player: ";
+            cin >> cedula;
+            cout << endl;
+
+            // Buscar al jugador por su número de cédula
+            int jugadorIndex = buscarJugador(playerInfo, playerCount, cedula);
+
+            // Validar si el jugador existe
+            if (jugadorIndex == -1)
+            {
+                cout << "Player is not registered." << endl;
+                cout << endl;
+                continue; // Volver al menú principal
+            }
+
+            // Asignar el símbolo al jugador
+            string jugadorSimbolo = "X";
+
+            // Jugar a Tic Tac Toe contra la computadora con el jugador y el símbolo correspondientes
+            playTicTacToeAgainstPC(playerInfo[jugadorIndex][0], playerInfo[jugadorIndex][1], playerInfo, playerCount);
+
+
             cout << endl;
         }
     }
